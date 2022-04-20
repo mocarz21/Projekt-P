@@ -86,8 +86,8 @@
       thisProduct.renderInMenu();
       thisProduct.getElements();
       thisProduct.initAccordion();
-      thisProduct.initOrderForm()
-      thisProduct.processOrder()
+      thisProduct.initOrderForm();
+      thisProduct.processOrder();
       console.log('new Product:' , thisProduct);
     }
     renderInMenu(){
@@ -128,14 +128,13 @@
         let activeProducts = document.querySelectorAll(select.all.menuProductsActive);   // jak wyszukujemy to co oznaczacza znak > np prduct list > .active
         for(let activProduct of activeProducts){
           
-         111
-         console.log('a',activProduct)
-         console.log('b',thisProduct.element)
+          console.log('a',activProduct);
+          console.log('b',thisProduct.element);
           
         
           /* if there is active product and it's not thisProduct.element, remove class active from it */     //po co skoro używamy póżniej toggle (czemu bez tego zapisu nie działa toggle) (działa ale nie wiem czemu)
           if( activProduct && (activProduct != thisProduct.element) ){                             
-           activProduct.classList.remove('active');
+            activProduct.classList.remove('active');
           }        
         }
         /* toggle active class on thisProduct.element */
@@ -144,7 +143,7 @@
       });
     }
     initOrderForm(){
-      const thisProduct = this
+      const thisProduct = this;
       console.log('initOrderForm', thisProduct);
 
       thisProduct.form.addEventListener('submit', function(event){
@@ -164,7 +163,7 @@
       
     }
     processOrder(){
-      const thisProduct = this
+      const thisProduct = this;
 
       
 
@@ -172,66 +171,61 @@
 
       // covert form to object structure e.g. { sauce: ['tomato'], toppings: ['olives', 'redPeppers']}
       const formData = utils.serializeFormToObject(thisProduct.form);
-      console.log('formData', formData);
-      
-
+    
       // set price to default price
       let price = thisProduct.data.price;
 
       // for every category (param)...
       for( let paramId in thisProduct.data.params){
-        console.log('thisProduct.data.params ',thisProduct.data.params)             // mam problem co na co wskazuje naprzykłąd jak mamy thisProduct.data.params a thisProduct.data.params[param]
-        console.log('paramId', paramId)
+        console.log('=================================thisProduct.data.params ',thisProduct.data.params);        // mam problem co na co wskazuje naprzykłąd jak mamy thisProduct.data.params a thisProduct.data.params[param]
+        console.log('paramId', paramId);
 
         // determine param value, e.g. paramId = 'toppings', param = { label: 'Toppings', type: 'checkboxes'... }
-        const param = thisProduct.data.params[paramId]                          
-        console.log('thisProduct.data.params[paramId]   ',param)
+        const param = thisProduct.data.params[paramId];                          
+        console.log('=================================thisProduct.data.params[paramId]   ',param);
         // for every option in this category
         for(const optionId in param.options){       
-          console.log('===================optionId',optionId)                                 //czemu musimy zrobić od param.options a nie wyszukuje po  thisProduct.data.params.options
-          console.log('===========================param.options[optionId]== ',param.options[optionId])
-          
-          
-
-
+          console.log('optionId',optionId);                                //czemu musimy zrobić od param.options a nie wyszukuje po  thisProduct.data.params.options ??
+          console.log('param.options[optionId]== ',param.options[optionId]);
 
           // determine option value, e.g. optionId = 'olives', option = { label: 'Olives', price: 2, default: true }
-          const option = param.options[optionId]
-          console.log('param.options[optionId]', option)
-          console.log('======================================formData[paramId]', formData[paramId])
-          console.log('formData[paramId].includes(optionId)',formData[paramId].includes(optionId))                                  //console.log('formData[paramId].includes(optionId)', param.options[optionId].includes('default')) przy takim zapisie nie chciało mi isc dalej
+          const option = param.options[optionId];
+          console.log('param.options[optionId]', option);
+          console.log('formData[paramId]', formData[paramId]);
+          console.log('formData[paramId].includes(optionId)',!formData[paramId].includes(optionId));  
+          console.log('param'. param) ;                              
           
-          
-          /*
+         
+          let image = thisProduct.imageWrapper.querySelector('.' + paramId + '-' + optionId);
+          const optionSelected = formData[paramId] && formData[paramId].includes(optionId);
+            
 
-          if ( formData[paramId] && formData[paramId].includes('optionId')){                 //sprawdzam czy sa składniki  sprawdz czy zawieraja optionId (a czemu maja nie zawierac kiedy sie miały)   //nie rozumiem kiedy na co wskazuje jezeli mamy naprzykład o co tutaj chodzi formData[paramId].includes(optionId) z kad on wie ze w tablicy ktora zawiera pomidor pomidor ma default ustawione na true
+          if (optionSelected){                 //sprawdzam czy sa składniki  sprawdz czy zawieraja optionId (a czemu maja nie zawierac kiedy sie miały)   //nie rozumiem kiedy na co wskazuje jezeli mamy naprzykład o co tutaj chodzi formData[paramId].includes(optionId) z kad on wie ze w tablicy ktora zawiera pomidor pomidor ma default ustawione na true
               
-            price = price 
-
-            if(param.options[optionId].default == true){
-                console.log('superrrrrrrrrrrrrrrrrr')
+            if(option.default == true){
+                price += option.price    
             }
-
-
-
+             
           }else if (option.default != true ){
-
-            price += option.price
-
-          }else if (option.default == true ){
-          
-
+                    
             price -= option.price
+              
           }
-          
-          */  
+          if(optionSelected && image){
+            image.classList.add('active')
+            
+          }else if(image){
+            image.classList.remove('active')
+          }
+   
         }
 
       }
-    // update calculated price in the HTML
-    thisProduct.priceElem.innerHTML = price;     //skad sie wzieło priceElem ?
-    console.log('price', price)
+      // update calculated price in the HTML
+
+      thisProduct.priceElem.innerHTML = price;     
+      console.log('price', price);
     }
   }
-   app.init();
+  app.init();
 }
