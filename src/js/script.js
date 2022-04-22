@@ -55,7 +55,7 @@
   const app = {
     initMenu: function(){
       const thisApp = this;
-      console.log('thisApp.data : ', thisApp.data);            //nie rozumiem czemu this wskazuej patrz initData
+      
       for(let productData in thisApp.data.products){
         new Product(productData , thisApp.data.products[productData]);
       }
@@ -87,6 +87,7 @@
       thisProduct.getElements();
       thisProduct.initAccordion();
       thisProduct.initOrderForm();
+      thisProduct.initAmountWidget();                     //Nie jestem pewny czy ma być thisProduct czy thisWidget
       thisProduct.processOrder();
       console.log('new Product:' , thisProduct);
     }
@@ -110,6 +111,7 @@
       thisProduct.cartButton = thisProduct.element.querySelector(select.menuProduct.cartButton);
       thisProduct.priceElem = thisProduct.element.querySelector(select.menuProduct.priceElem);
       thisProduct.imageWrapper = thisProduct.element.querySelector(select.menuProduct.imageWrapper);
+      thisProduct.amountWidgetElem = thisProduct.element.querySelector(select.menuProduct.amountWidget)
     }
     initAccordion(){
       const thisProduct = this;
@@ -128,8 +130,7 @@
         let activeProducts = document.querySelectorAll(select.all.menuProductsActive);   // jak wyszukujemy to co oznaczacza znak > np prduct list > .active
         for(let activProduct of activeProducts){
           
-          console.log('a',activProduct);
-          console.log('b',thisProduct.element);
+         
           
         
           /* if there is active product and it's not thisProduct.element, remove class active from it */     //po co skoro używamy póżniej toggle (czemu bez tego zapisu nie działa toggle) (działa ale nie wiem czemu)
@@ -139,12 +140,12 @@
         }
         /* toggle active class on thisProduct.element */
         thisProduct.element.classList.toggle(classNames.menuProduct.wrapperActive);
-        console.log(this);
+        
       });
     }
     initOrderForm(){
       const thisProduct = this;
-      console.log('initOrderForm', thisProduct);
+      
 
       thisProduct.form.addEventListener('submit', function(event){
         event.preventDefault();
@@ -177,23 +178,16 @@
 
       // for every category (param)...
       for( let paramId in thisProduct.data.params){
-        console.log('=================================thisProduct.data.params ',thisProduct.data.params);        // mam problem co na co wskazuje naprzykłąd jak mamy thisProduct.data.params a thisProduct.data.params[param]
-        console.log('paramId', paramId);
+        
 
         // determine param value, e.g. paramId = 'toppings', param = { label: 'Toppings', type: 'checkboxes'... }
         const param = thisProduct.data.params[paramId];                          
-        console.log('=================================thisProduct.data.params[paramId]   ',param);
+        
         // for every option in this category
         for(const optionId in param.options){       
-          console.log('optionId',optionId);                                //czemu musimy zrobić od param.options a nie wyszukuje po  thisProduct.data.params.options ??
-          console.log('param.options[optionId]== ',param.options[optionId]);
-
+          
           // determine option value, e.g. optionId = 'olives', option = { label: 'Olives', price: 2, default: true }
-          const option = param.options[optionId];
-          console.log('param.options[optionId]', option);
-          console.log('formData[paramId]', formData[paramId]);
-          console.log('formData[paramId].includes(optionId)',!formData[paramId].includes(optionId));  
-          console.log('param'. param) ;                              
+          const option = param.options[optionId];                            
           
          
           let image = thisProduct.imageWrapper.querySelector('.' + paramId + '-' + optionId);
@@ -203,19 +197,19 @@
           if (optionSelected){                 //sprawdzam czy sa składniki  sprawdz czy zawieraja optionId (a czemu maja nie zawierac kiedy sie miały)   //nie rozumiem kiedy na co wskazuje jezeli mamy naprzykład o co tutaj chodzi formData[paramId].includes(optionId) z kad on wie ze w tablicy ktora zawiera pomidor pomidor ma default ustawione na true
               
             if(option.default == true){
-                price += option.price    
+              price += option.price;   
             }
              
           }else if (option.default != true ){
                     
-            price -= option.price
+            price -= option.price;
               
           }
           if(optionSelected && image){
-            image.classList.add('active')
+            image.classList.add('active');
             
           }else if(image){
-            image.classList.remove('active')
+            image.classList.remove('active');
           }
    
         }
@@ -224,7 +218,76 @@
       // update calculated price in the HTML
 
       thisProduct.priceElem.innerHTML = price;     
-      console.log('price', price);
+      
+    }
+    initAmountWidget(){
+      const thisProduct = this;
+
+      thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem)    //skad się bierze amountWidget ? 
+
+    }
+  }
+  class AmountWidget{
+    constructor(element){
+      const thisWidget = this;
+      thisWidget.getElements(element);                        // nie rozumiem za bardzo co tu sie dzieje (rozumiem ze zostaje przekazany argument element zeby był dostępny w metodzie getElements ale po zapisie nie bardzo wiem jak to sie dzieje i do końca po co )
+      thisWidget.setValue();
+      thisWidget.initActions()
+
+      console.log('thisWidget ', thisWidget)
+      console.log('element ', element)
+    }
+    getElements(element){                               //czemu po tym kroku thisWidget pokazuje konkretny element w console a wczesniej pokazywało pusty obiekt a teraz wskazuje na diva ?
+      const thisWidget = this;
+      
+      thisWidget.element = element;
+      thisWidget.input = thisWidget.element.querySelector(select.widgets.amount.input);
+      thisWidget.linkDecrease = thisWidget.element.querySelector(select.widgets.amount.linkDecrease);
+      thisWidget.linkIncrease = thisWidget.element.querySelector(select.widgets.amount.linkIncrease);
+    }
+    setValue(value){
+      
+      const thisWidget = this;               //czy zależnie od klasy musimy do this przypisywac inna nazwę
+      
+      const newValue = parseInt(value);
+      
+
+      if(thisWidget.value !== newValue && !isNaN(newValue)){
+
+        thisWidget.value = newValue;
+
+                                                                    /* Czy mogłem to dalejzapisac w ten sposób
+
+                                                                    if(isNaN(newValue) && newValue !== null){
+                                                                      
+                                                                    }else{  
+                                                                      
+                                                                    }
+                                                                    */
+
+         thisWidget.input.value = thisWidget.value;         //czemu musi byc w petli                                              
+      }
+      
+      
+      //      nie wiem gdzie mam to wstawic  >  thisWidget.setValue(thisWidget.input.value);   
+    }
+    initActions(){
+      const thisWidget = this
+
+      thisWidget.input.addEventListener('change', function(){
+        thisWidget.setValue(thisWidget.input.value)
+        console.log('zmiana')
+      })
+      thisWidget.linkDecrease.addEventListener('click', function(event){
+        event.preventDefault();
+        thisWidget.input.value -= 1
+        
+      })
+      thisWidget.linkIncrease.addEventListener('click', function(event){
+        event.preventDefault();
+        thisWidget.input.value =Number(thisWidget.input.value) + 1
+        console.log('zmiana', thisWidget.input.value)
+      })
     }
   }
   app.init();
