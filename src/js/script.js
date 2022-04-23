@@ -111,7 +111,7 @@
       thisProduct.cartButton = thisProduct.element.querySelector(select.menuProduct.cartButton);
       thisProduct.priceElem = thisProduct.element.querySelector(select.menuProduct.priceElem);
       thisProduct.imageWrapper = thisProduct.element.querySelector(select.menuProduct.imageWrapper);
-      thisProduct.amountWidgetElem = thisProduct.element.querySelector(select.menuProduct.amountWidget)
+      thisProduct.amountWidgetElem = thisProduct.element.querySelector(select.menuProduct.amountWidget);
     }
     initAccordion(){
       const thisProduct = this;
@@ -217,13 +217,18 @@
       }
       // update calculated price in the HTML
 
+      price *=thisProduct.amountWidget.value; //czemu w ten sposób
+
       thisProduct.priceElem.innerHTML = price;     
       
     }
     initAmountWidget(){
       const thisProduct = this;
 
-      thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem)    //skad się bierze amountWidget ? 
+      thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem);    //skad się bierze amountWidget ? 
+      thisProduct.amountWidgetElem.addEventListener('update', function(){
+        thisProduct.processOrder();
+      });
 
     }
   }
@@ -232,10 +237,10 @@
       const thisWidget = this;
       thisWidget.getElements(element);                        // nie rozumiem za bardzo co tu sie dzieje (rozumiem ze zostaje przekazany argument element zeby był dostępny w metodzie getElements ale po zapisie nie bardzo wiem jak to sie dzieje i do końca po co )
       thisWidget.setValue();
-      thisWidget.initActions()
+      thisWidget.initActions();
 
-      console.log('thisWidget ', thisWidget)
-      console.log('element ', element)
+      console.log('thisWidget ', thisWidget);
+      console.log('element ', element);
     }
     getElements(element){                               //czemu po tym kroku thisWidget pokazuje konkretny element w console a wczesniej pokazywało pusty obiekt a teraz wskazuje na diva ?
       const thisWidget = this;
@@ -245,50 +250,56 @@
       thisWidget.linkDecrease = thisWidget.element.querySelector(select.widgets.amount.linkDecrease);
       thisWidget.linkIncrease = thisWidget.element.querySelector(select.widgets.amount.linkIncrease);
     }
+    announce(){
+      const thisWidget = this;
+      
+      const event = new Event('update');
+      thisWidget.element.dispatchEvent(event);
+    }
     setValue(value){
       
       const thisWidget = this;               //czy zależnie od klasy musimy do this przypisywac inna nazwę
-      
+      thisWidget.value = settings.amountWidget.defaultValue;
       const newValue = parseInt(value);
       
 
       if(thisWidget.value !== newValue && !isNaN(newValue)){
-
-        thisWidget.value = newValue;
-
-                                                                    /* Czy mogłem to dalejzapisac w ten sposób
-
-                                                                    if(isNaN(newValue) && newValue !== null){
-                                                                      
-                                                                    }else{  
-                                                                      
-                                                                    }
-                                                                    */
-
-         thisWidget.input.value = thisWidget.value;         //czemu musi byc w petli                                              
+        
+        if(thisWidget.input.value > settings.amountWidget.defaultMax){       //co zrobić w momęcie gdy Eslint pokazuje komunikat empty block statment
+          // empty
+        }else if(thisWidget.input.value <= settings.amountWidget.defaultMin){
+          // empty
+        }else{
+          thisWidget.value = newValue;
+          console.log('as',thisWidget.value);
+        }
+ 
+        thisWidget.input.value = thisWidget.value;         //czemu musi byc w petli                                              
       }
-      
+      thisWidget.announce();
       
       //      nie wiem gdzie mam to wstawic  >  thisWidget.setValue(thisWidget.input.value);   
     }
     initActions(){
-      const thisWidget = this
+      const thisWidget = this;
 
       thisWidget.input.addEventListener('change', function(){
-        thisWidget.setValue(thisWidget.input.value)
-        console.log('zmiana')
-      })
+        thisWidget.setValue(thisWidget.input.value);
+        console.log('zmiana');
+      });
       thisWidget.linkDecrease.addEventListener('click', function(event){
         event.preventDefault();
-        thisWidget.input.value -= 1
+        thisWidget.setValue(thisWidget.input.value -= 1);
         
-      })
+        
+      });
       thisWidget.linkIncrease.addEventListener('click', function(event){
         event.preventDefault();
-        thisWidget.input.value =Number(thisWidget.input.value) + 1
-        console.log('zmiana', thisWidget.input.value)
-      })
+        thisWidget.setValue(thisWidget.input.value =Number(thisWidget.input.value) + 1);
+        console.log('zmiana', thisWidget.input.value);
+      });
     }
+    
   }
   app.init();
 }
