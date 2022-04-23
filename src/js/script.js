@@ -2,10 +2,12 @@
 
 {
   'use strict';
+  
 
   const select = {
     templateOf: {
       menuProduct: '#template-menu-product',
+      cartProduct: '#template-cart-product',
     },
     containerOf: {
       menu: '#product-list',
@@ -26,10 +28,28 @@
     },
     widgets: {
       amount: {
-        input: 'input[name="amount"]',
+        input:'input.amount',
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
+    },
+    cart: {
+      productList: '.cart__order-summary',
+      toggleTrigger: '.cart__summary',
+      totalNumber: `.cart__total-number`,
+      totalPrice: '.cart__total-price strong, .cart__order-total .cart__order-price-sum strong',
+      subtotalPrice: '.cart__order-subtotal .cart__order-price-sum strong',
+      deliveryFee: '.cart__order-delivery .cart__order-price-sum strong',
+      form: '.cart__order',
+      formSubmit: '.cart__order [type="submit"]',
+      phone: '[name="phone"]',
+      address: '[name="address"]',
+    },
+    cartProduct: {
+      amountWidget: '.widget-amount',
+      price: '.cart__product-price',
+      edit: '[href="#edit"]',
+      remove: '[href="#remove"]',
     },
   };
 
@@ -38,6 +58,9 @@
       wrapperActive: 'active',
       imageVisible: 'active',
     },
+    cart: {
+      wrapperActive: 'active',
+    },
   };
 
   const settings = {
@@ -45,12 +68,52 @@
       defaultValue: 1,
       defaultMin: 1,
       defaultMax: 9,
-    }
+    },
+    cart: {
+      defaultDeliveryFee: 20,
+    },
   };
 
   const templates = {
     menuProduct: Handlebars.compile(document.querySelector(select.templateOf.menuProduct).innerHTML),
+    cartProduct: Handlebars.compile(document.querySelector(select.templateOf.cartProduct).innerHTML),
   };
+
+  class Cart{
+    constructor(element){
+      const thisCart = this;
+      thisCart.products = [];  
+
+      thisCart.getElements(element);
+      thisCart.initActions();
+
+      console.log('newCart ',thisCart);
+
+      
+    }
+
+    getElements(element){
+      const thisCart = this;
+
+      thisCart.dom = {}     //jak to rozumieć
+
+      thisCart.dom.wrapper = element   //?? co tu się stało  (stworzył klucz obiektu wrappeer i dodał do niego element)
+      thisCart.dom.toggleTrigger =thisCart.dom.wrapper.querySelector(select.cart.toggleTrigger); 
+
+
+    }
+
+    initActions(){
+      const thisCart = this;
+      thisCart.dom.toggleTrigger.addEventListener('click', function(){
+        thisCart.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
+
+      });
+
+
+    }
+
+  }
 
   const app = {
     initMenu: function(){
@@ -60,6 +123,12 @@
         new Product(productData , thisApp.data.products[productData]);
       }
 
+    },
+    initCart: function(){
+      const thisApp = this;
+      
+      const cartElem = document.querySelector(select.containerOf.cart)
+      thisApp.cart = new Cart(cartElem)   //po co początek thisApp. cart nie wystarczyło by new Cart(carElem)
     },
     initData: function(){
       const thisApp = this;
@@ -76,6 +145,7 @@
 
       thisApp.initData();                            
       thisApp.initMenu();                           // nie rozumiem czemu nie wystarczy odpalenie samej metody initMenu       this wslkazuje na app
+      thisApp.initCart();
     },
   };
   class Product{
@@ -87,7 +157,7 @@
       thisProduct.getElements();
       thisProduct.initAccordion();
       thisProduct.initOrderForm();
-      thisProduct.initAmountWidget();                     //Nie jestem pewny czy ma być thisProduct czy thisWidget
+      thisProduct.initAmountWidget();                     
       thisProduct.processOrder();
       console.log('new Product:' , thisProduct);
     }
@@ -96,7 +166,7 @@
 
       const generatedHTML = templates.menuProduct(thisProduct.data);   
 
-      thisProduct.element = utils.createDOMFromHTML(generatedHTML);       //skąd ten element po kropce(.element) po co jest co daje z kad sie pojawił i dlaczego tu własnie definiujemy ten element
+      thisProduct.element = utils.createDOMFromHTML(generatedHTML);       
 
       const menuContainer = document.querySelector(select.containerOf.menu);
 
@@ -105,7 +175,7 @@
     getElements(){
       const thisProduct = this;
     
-      thisProduct.accordionTrigger = thisProduct.element.querySelector(select.menuProduct.clickable);
+      thisProduct.accordionTrigger = thisProduct.element.querySelector(select.menuProduct.clickable);         // Spróbuj wprowadzić ten sam pomysł w klasie Product. Tak, żeby wszystkie referencje do elementów DOM były "schowane" w obiekcie dodatkowym obiekcie thisProduct.dom.
       thisProduct.form = thisProduct.element.querySelector(select.menuProduct.form);
       thisProduct.formInputs = thisProduct.form.querySelectorAll(select.all.formInputs);
       thisProduct.cartButton = thisProduct.element.querySelector(select.menuProduct.cartButton);
@@ -127,13 +197,13 @@
         /* find active product (product that has active class) */
             
         
-        let activeProducts = document.querySelectorAll(select.all.menuProductsActive);   // jak wyszukujemy to co oznaczacza znak > np prduct list > .active
+        let activeProducts = document.querySelectorAll(select.all.menuProductsActive);   
         for(let activProduct of activeProducts){
           
          
           
         
-          /* if there is active product and it's not thisProduct.element, remove class active from it */     //po co skoro używamy póżniej toggle (czemu bez tego zapisu nie działa toggle) (działa ale nie wiem czemu)
+          /* if there is active product and it's not thisProduct.element, remove class active from it */     
           if( activProduct && (activProduct != thisProduct.element) ){                             
             activProduct.classList.remove('active');
           }        
@@ -194,7 +264,7 @@
           const optionSelected = formData[paramId] && formData[paramId].includes(optionId);
             
 
-          if (optionSelected){                 //sprawdzam czy sa składniki  sprawdz czy zawieraja optionId (a czemu maja nie zawierac kiedy sie miały)   //nie rozumiem kiedy na co wskazuje jezeli mamy naprzykład o co tutaj chodzi formData[paramId].includes(optionId) z kad on wie ze w tablicy ktora zawiera pomidor pomidor ma default ustawione na true
+          if (optionSelected){                 
               
             if(option.default == true){
               price += option.price;   
@@ -265,7 +335,7 @@
 
       if(thisWidget.value !== newValue && !isNaN(newValue)){
         
-        if(thisWidget.input.value > settings.amountWidget.defaultMax){       //co zrobić w momęcie gdy Eslint pokazuje komunikat empty block statment
+        if(thisWidget.input.value > settings.amountWidget.defaultMax){       
           // empty
         }else if(thisWidget.input.value <= settings.amountWidget.defaultMin){
           // empty
