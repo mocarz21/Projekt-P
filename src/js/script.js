@@ -16,7 +16,7 @@
     all: {
       menuProducts: '#product-list > .product',
       menuProductsActive: '#product-list > .product.active',
-      formInputs: 'input, select',                                //na co wskazuje  wyszukuje w takim momecie inputy i selecty na raz
+      formInputs: 'input, select',                                //na co wskazuje  wyszukuje w takim momecie.  inputy i selecty na raz
     },
     menuProduct: {
       clickable: '.product__header',
@@ -79,6 +79,7 @@
     cartProduct: Handlebars.compile(document.querySelector(select.templateOf.cartProduct).innerHTML),
   };
 
+
   class Cart{
     constructor(element){
       const thisCart = this;
@@ -86,6 +87,7 @@
 
       thisCart.getElements(element);
       thisCart.initActions();
+      
 
       console.log('newCart ',thisCart);
 
@@ -95,10 +97,11 @@
     getElements(element){
       const thisCart = this;
 
-      thisCart.dom = {}     //jak to rozumieć
+      thisCart.dom = {};     //jak to rozumieć
 
-      thisCart.dom.wrapper = element   //?? co tu się stało  (stworzył klucz obiektu wrappeer i dodał do niego element)
+      thisCart.dom.wrapper = element;   //?? co tu się stało  (stworzył klucz obiektu wrappeer i dodał do niego element)
       thisCart.dom.toggleTrigger =thisCart.dom.wrapper.querySelector(select.cart.toggleTrigger); 
+      thisCart.dom.productList =thisCart.dom.wrapper.querySelector(select.cart.productList);
 
 
     }
@@ -112,8 +115,26 @@
 
 
     }
+    add(menuProduct){
+      const thisCart = this;
 
+      console.log('adding product', menuProduct);
+
+      const generatedHTML = templates.cartProduct(menuProduct);   
+      console.log('generatedHTML', generatedHTML);
+
+      thisCart.element = utils.createDOMFromHTML(generatedHTML);   
+      console.log('thisCart.element', thisCart.element);
+    
+
+      const cartContainer = thisCart.dom.productList;
+      console.log('cartContainer', cartContainer);
+
+      cartContainer.appendChild(thisCart.element);
+      
+    }
   }
+
 
   const app = {
     initMenu: function(){
@@ -124,11 +145,12 @@
       }
 
     },
+    
     initCart: function(){
       const thisApp = this;
       
-      const cartElem = document.querySelector(select.containerOf.cart)
-      thisApp.cart = new Cart(cartElem)   //po co początek thisApp. cart nie wystarczyło by new Cart(carElem)
+      const cartElem = document.querySelector(select.containerOf.cart);
+      thisApp.cart = new Cart(cartElem);   
     },
     initData: function(){
       const thisApp = this;
@@ -147,6 +169,7 @@
       thisApp.initMenu();                           // nie rozumiem czemu nie wystarczy odpalenie samej metody initMenu       this wslkazuje na app
       thisApp.initCart();
     },
+    
   };
   class Product{
     constructor(id , data){
@@ -159,6 +182,7 @@
       thisProduct.initOrderForm();
       thisProduct.initAmountWidget();                     
       thisProduct.processOrder();
+      thisProduct.prepareCartProductParams();
       console.log('new Product:' , thisProduct);
     }
     renderInMenu(){
@@ -201,7 +225,6 @@
         for(let activProduct of activeProducts){
           
          
-          
         
           /* if there is active product and it's not thisProduct.element, remove class active from it */     
           if( activProduct && (activProduct != thisProduct.element) ){                             
@@ -220,25 +243,24 @@
       thisProduct.form.addEventListener('submit', function(event){
         event.preventDefault();
         thisProduct.processOrder();
+        thisProduct.prepareCartProductParams();
       });
       for(let input of thisProduct.formInputs){
         input.addEventListener('change', function(){
           thisProduct.processOrder();
+          thisProduct.prepareCartProductParams();
         });
       }
       
       thisProduct.cartButton.addEventListener('click', function(event){
         event.preventDefault();
         thisProduct.processOrder();
+        thisProduct.addToCart();
       });
       
     }
     processOrder(){
       const thisProduct = this;
-
-      
-
-      
 
       // covert form to object structure e.g. { sauce: ['tomato'], toppings: ['olives', 'redPeppers']}
       const formData = utils.serializeFormToObject(thisProduct.form);
@@ -286,8 +308,9 @@
 
       }
       // update calculated price in the HTML
-
+      thisProduct.priceSingle = price;
       price *=thisProduct.amountWidget.value; //czemu w ten sposób
+      
 
       thisProduct.priceElem.innerHTML = price;     
       
@@ -298,17 +321,85 @@
       thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem);    //skad się bierze amountWidget ? 
       thisProduct.amountWidgetElem.addEventListener('update', function(){
         thisProduct.processOrder();
+        
       });
 
     }
+    addToCart(){
+      
+      const thisProduct = this;
+      app.cart.add(thisProduct.prepareCartProduct()); 
+      
+
+    }
+
+    prepareCartProduct(){
+      const thisProduct = this;
+
+      const productSummary = {id: thisProduct.id , name: thisProduct.data.name , amount: thisProduct.amountWidget.value, 
+        priceSingle: thisProduct.priceSingle, price: thisProduct.priceSingle * thisProduct.amountWidget.value, params: thisProduct.prepareCartProductParams() };
+      
+
+      return productSummary;
+      
+    }
+
+
+    prepareCartProductParams(){
+
+
+      const params = {};
+      
+      const thisProduct = this;
+
+      // covert form to object structure e.g. { sauce: ['tomato'], toppings: ['olives', 'redPeppers']}
+      const formData = utils.serializeFormToObject(thisProduct.form);
+    
+     
+
+      // for every category (param)...
+      for( let paramId in thisProduct.data.params){
+        
+        
+
+        // determine param value, e.g. paramId = 'toppings', param = { label: 'Toppings', type: 'checkboxes'... }
+        const param = thisProduct.data.params[paramId];      
+
+        params[paramId] = {
+          label: param.label,
+          options: {}
+        };
+
+        // for every option in this category
+        for(const optionId in param.options){       
+          
+         
+
+          // determine option value, e.g. optionId = 'olives', option = { label: 'Olives', price: 2, default: true }
+                                    
+           
+          const optionSelected = formData[paramId] && formData[paramId].includes(optionId);
+            
+          
+
+          if (optionSelected){    
+
+            params[paramId].options[optionId] = optionId;
+          }                    
+    
+        }
+      }
+      return params;  
+    }
+
+    
   }
   class AmountWidget{
     constructor(element){
       const thisWidget = this;
       thisWidget.getElements(element);                        // nie rozumiem za bardzo co tu sie dzieje (rozumiem ze zostaje przekazany argument element zeby był dostępny w metodzie getElements ale po zapisie nie bardzo wiem jak to sie dzieje i do końca po co )
-      thisWidget.setValue();
+      thisWidget.setValue(thisWidget.input.value);
       thisWidget.initActions();
-
       console.log('thisWidget ', thisWidget);
       console.log('element ', element);
     }
@@ -328,10 +419,11 @@
     }
     setValue(value){
       
-      const thisWidget = this;               //czy zależnie od klasy musimy do this przypisywac inna nazwę
+      const thisWidget = this;               
       thisWidget.value = settings.amountWidget.defaultValue;
       const newValue = parseInt(value);
       
+      console.log('assssssssssssssss',value); 
 
       if(thisWidget.value !== newValue && !isNaN(newValue)){
         
@@ -341,14 +433,15 @@
           // empty
         }else{
           thisWidget.value = newValue;
-          console.log('as',thisWidget.value);
-        }
- 
-        thisWidget.input.value = thisWidget.value;         //czemu musi byc w petli                                              
+          
+          
+        }    
+                                                
       }
+      thisWidget.input.value = thisWidget.value; 
       thisWidget.announce();
       
-      //      nie wiem gdzie mam to wstawic  >  thisWidget.setValue(thisWidget.input.value);   
+      
     }
     initActions(){
       const thisWidget = this;
