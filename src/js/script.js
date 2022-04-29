@@ -154,6 +154,14 @@
       }
       console.log('payLoad', payLoad);
       
+      const options ={
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payLoad)
+      }
+      fetch(url, options);
 
     }
 
