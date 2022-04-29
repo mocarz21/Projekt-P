@@ -37,7 +37,7 @@
       productList: '.cart__order-summary',
       toggleTrigger: '.cart__summary',
       totalNumber: `.cart__total-number`,
-      totalPrice: '.cart__total-price strong, .cart__order-total .cart__order-price-sum strong',
+      totalPrice: '.cart__total-price strong, .cart__order-total  .cart__order-price-sum strong',
       subtotalPrice: '.cart__order-subtotal .cart__order-price-sum strong',
       deliveryFee: '.cart__order-delivery .cart__order-price-sum strong',
       form: '.cart__order',
@@ -64,6 +64,11 @@
   };
 
   const settings = {
+    db: {
+      url: '//localhost:3131',
+      products: 'products',
+      orders: 'orders',
+    },
     amountWidget: {
       defaultValue: 1,
       defaultMin: 1,
@@ -87,9 +92,9 @@
 
       thisCart.getElements(element);
       thisCart.initActions();
-      
+      thisCart.update();
 
-      console.log('newCart ',thisCart);
+     
 
       
     }
@@ -97,13 +102,18 @@
     getElements(element){
       const thisCart = this;
 
-      thisCart.dom = {};     //jak to rozumieć
+      thisCart.dom = {};     
 
-      thisCart.dom.wrapper = element;   //?? co tu się stało  (stworzył klucz obiektu wrappeer i dodał do niego element)
+      thisCart.dom.wrapper = element;   
       thisCart.dom.toggleTrigger =thisCart.dom.wrapper.querySelector(select.cart.toggleTrigger); 
       thisCart.dom.productList =thisCart.dom.wrapper.querySelector(select.cart.productList);
-
-
+      thisCart.deliveryFee = thisCart.dom.wrapper.querySelector(select.cart.deliveryFee);
+      thisCart.subtotalPrice = thisCart.dom.wrapper.querySelector(select.cart.subtotalPrice);
+      thisCart.totalPrice = thisCart.dom.wrapper.querySelector(select.cart.totalPrice);
+      thisCart.totalNumber = thisCart.dom.wrapper.querySelector(select.cart.totalNumber);
+      thisCart.dom.form = thisCart.dom.wrapper.querySelector(select.cart.form);
+      thisCart.dom.phone = thisCart.dom.wrapper.querySelector(select.cart.phone);
+      thisCart.dom.address = thisCart.dom.wrapper.querySelector(select.cart.address);
     }
 
     initActions(){
@@ -112,36 +122,191 @@
         thisCart.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
 
       });
+      thisCart.dom.productList.addEventListener('updated', function(){ //wiem ze dzieki bubbles mozemy uzyc ale nie zabardzo wiem co sie dzieje czemu to działa wszedzie itd
+        thisCart.update();
+      });
+      thisCart.dom.productList.addEventListener('remove', function(event){
+        event.preventDefault();
+        console.log('event.detail.cartProduct', event.detail.cartProduct);
+        thisCart.remove(event.detail.cartProduct);
+        
+      });
+      thisCart.dom.form.addEventListener('submit', function(event){
+        event.preventDefault();
+        thisCart.sendOrder();
+      });
+    }
 
+    sendOrder(){
+      const thisCart = this;
+      const url = settings.db.url + '/' + settings.db.orders;
+      let payLoad = {};
+     
+      payLoad.products = [];
+      payLoad.address = thisCart.dom.form.address.value;
+      payLoad.phone = thisCart.dom.form.phone.value;
+      payLoad.totalPrice = thisCart.totalPrice.innerHTML;
+      payLoad.subtotalPrice = thisCart.subtotalPrice.innerHTML;
+      payLoad.totalNumber = thisCart.totalNumber.innerHTML;
+      payLoad.deliveryFee = thisCart.deliveryFee.innerHTML;
+      for(let prod of thisCart.products){  
+        payLoad.products.push(prod.getData());
+      }
+      console.log('payLoad', payLoad);
+      
 
     }
+
     add(menuProduct){
       const thisCart = this;
 
-      console.log('adding product', menuProduct);
+     
 
       const generatedHTML = templates.cartProduct(menuProduct);   
-      console.log('generatedHTML', generatedHTML);
+      
 
-      thisCart.element = utils.createDOMFromHTML(generatedHTML);   
-      console.log('thisCart.element', thisCart.element);
+      const generatedDOM = utils.createDOMFromHTML(generatedHTML);   
+      
     
 
       const cartContainer = thisCart.dom.productList;
-      console.log('cartContainer', cartContainer);
-
-      cartContainer.appendChild(thisCart.element);
       
+
+      cartContainer.appendChild(generatedDOM);
+      
+      thisCart.products.push(new CartProduct(menuProduct, generatedDOM));
+    
+      thisCart.update();
+    }
+    update(){
+      const thisCart = this;
+      const deliveryFee =settings.cart.defaultDeliveryFee;
+      thisCart.deliveryFee.innerHTML = deliveryFee;
+      let totalNumber = 0;
+      let subtotalPrice = 0;
+      for(let product of  thisCart.products){
+      
+        totalNumber += product.amount;
+        subtotalPrice += product.price;
+      }  
+      if(subtotalPrice ==0){
+        //empty
+
+      }else{
+        thisCart.subtotalPrice.innerHTML = subtotalPrice;
+        thisCart.totalPrice.innerHTML = subtotalPrice + deliveryFee; //czemu nie chce mi wstawic wartosci do total ??
+        
+      }
+      
+      thisCart.totalNumber.innerHTML = totalNumber;
+     
+    }
+    remove(cartProduct){                                                        //do przejrzenia 
+      
+      const thisCart = this;
+      //1
+      cartProduct.dom.wrapper.remove();
+
+      //2
+
+      const indexOfRemoveProduct = thisCart.products.indexOf(cartProduct);
+      thisCart.products.splice(indexOfRemoveProduct,1);
+      
+      //3
+      thisCart.update();
     }
   }
 
+  class CartProduct{
+    constructor(menuProduct, element){                           
+      const thisCartProduct = this;
+      thisCartProduct.id = menuProduct.id;
+      thisCartProduct.name = menuProduct.name;
+      thisCartProduct.price = menuProduct.price;
+      thisCartProduct.priceSingle = menuProduct.priceSingle;
+      thisCartProduct.amount = menuProduct.amount;
+      thisCartProduct.params = menuProduct.params;
+      thisCartProduct.getElements(element);
+      thisCartProduct.initAmountWidget();
+      thisCartProduct.initActions();
+      thisCartProduct.getData();
+
+    }
+    getElements(element){
+      const thisCartProduct = this;
+      thisCartProduct.dom = {};
+      thisCartProduct.dom.wrapper = element;
+      thisCartProduct.dom.amountWidget =thisCartProduct.dom.wrapper.querySelector(select.cartProduct.amountWidget); 
+      thisCartProduct.dom.price = thisCartProduct.dom.wrapper.querySelector(select.cartProduct.price);
+      thisCartProduct.dom.edit = thisCartProduct.dom.wrapper.querySelector(select.cartProduct.edit);
+      thisCartProduct.dom.remove = thisCartProduct.dom.wrapper.querySelector(select.cartProduct.remove);
+
+    }
+    initAmountWidget(){
+      const thisCartProduct = this;
+
+      thisCartProduct.amountWidget = new AmountWidget(thisCartProduct.dom.amountWidget);    
+      thisCartProduct.dom.amountWidget.addEventListener('update', function(){
+
+        
+        const howMuch = thisCartProduct.amountWidget.value      ;                                  //czemu tutaj musiałem wstawić  thisCartProduct.amountWidget.value a nie działało  thisCartProduct.dom.amountWidget.value
+
+
+        thisCartProduct.dom.price.innerHTML = thisCartProduct.priceSingle;
+       
+        
+      });
+    }
+
+    remove(){
+      const thisCartProduct = this;
+      const event = new CustomEvent ('remove', {
+        bubbles: true,
+        detail: {
+          cartProduct: thisCartProduct
+
+        },
+      });
+      thisCartProduct.dom.wrapper.dispatchEvent(event);
+    }
+
+    initActions(event){
+      const thisCartProduct = this;
+
+      thisCartProduct.dom.edit.addEventListener('click', function(){
+        event.preventDefault();
+
+      });
+
+      thisCartProduct.dom.remove.addEventListener('click', function(){
+      //  event.preventDefault();
+        thisCartProduct.remove();
+        console.log('remove' , thisCartProduct.remove());
+
+      });
+
+    }
+    getData(){
+      const thisCartProduct = this;
+      let orderObject = {};
+      orderObject.id = thisCartProduct.id;
+      orderObject.amount = thisCartProduct.amount;
+      orderObject.price = thisCartProduct.price;
+      orderObject.priceSingle = thisCartProduct.priceSingle;
+      orderObject.name = thisCartProduct.name;
+      orderObject.params = thisCartProduct.params;
+
+      console.log('orderObject ',orderObject);
+      return orderObject;
+    }
+  }
 
   const app = {
     initMenu: function(){
       const thisApp = this;
       
       for(let productData in thisApp.data.products){
-        new Product(productData , thisApp.data.products[productData]);
+        new Product(thisApp.data.products[productData].id , thisApp.data.products[productData]);
       }
 
     },
@@ -155,7 +320,22 @@
     initData: function(){
       const thisApp = this;
 
-      thisApp.data = dataSource;
+      thisApp.data = {};
+      const url = settings.db.url + '/' + settings.db.products;
+      
+      fetch(url)
+        .then(function(rawResponse){
+          return rawResponse.json();
+        })
+        .then(function(parsedResponse){
+          console.log('parsedResponse', parsedResponse);
+
+          
+          thisApp.data.products = parsedResponse;
+
+          thisApp.initMenu(); 
+        });
+      console.log('thisapp.data', JSON.stringify(thisApp.data));
     },
     init: function(){
       const thisApp = this;
@@ -166,7 +346,7 @@
       console.log('templates:', templates);
 
       thisApp.initData();                            
-      thisApp.initMenu();                           // nie rozumiem czemu nie wystarczy odpalenie samej metody initMenu       this wslkazuje na app
+      
       thisApp.initCart();
     },
     
@@ -183,7 +363,7 @@
       thisProduct.initAmountWidget();                     
       thisProduct.processOrder();
       thisProduct.prepareCartProductParams();
-      console.log('new Product:' , thisProduct);
+     
     }
     renderInMenu(){
       const thisProduct = this;
@@ -400,8 +580,7 @@
       thisWidget.getElements(element);                        // nie rozumiem za bardzo co tu sie dzieje (rozumiem ze zostaje przekazany argument element zeby był dostępny w metodzie getElements ale po zapisie nie bardzo wiem jak to sie dzieje i do końca po co )
       thisWidget.setValue(thisWidget.input.value);
       thisWidget.initActions();
-      console.log('thisWidget ', thisWidget);
-      console.log('element ', element);
+     
     }
     getElements(element){                               //czemu po tym kroku thisWidget pokazuje konkretny element w console a wczesniej pokazywało pusty obiekt a teraz wskazuje na diva ?
       const thisWidget = this;
@@ -414,7 +593,7 @@
     announce(){
       const thisWidget = this;
       
-      const event = new Event('update');
+      const event = new CustomEvent('update',{bubbles: true});
       thisWidget.element.dispatchEvent(event);
     }
     setValue(value){
@@ -422,44 +601,45 @@
       const thisWidget = this;               
       thisWidget.value = settings.amountWidget.defaultValue;
       const newValue = parseInt(value);
-      
-      console.log('assssssssssssssss',value); 
+      console.log('value', value, thisWidget.value, newValue );
+     
 
       if(thisWidget.value !== newValue && !isNaN(newValue)){
         
-        if(thisWidget.input.value > settings.amountWidget.defaultMax){       
+        if(thisWidget.value > settings.amountWidget.defaultMax){       
           // empty
-        }else if(thisWidget.input.value <= settings.amountWidget.defaultMin){
+        }else if(thisWidget.value <= settings.amountWidget.defaultMin){
           // empty
         }else{
           thisWidget.value = newValue;
           
-          
+          console.log(' thisWidget.value',  thisWidget.value );
         }    
                                                 
       }
       thisWidget.input.value = thisWidget.value; 
       thisWidget.announce();
-      
+      console.log('new value', newValue );
       
     }
     initActions(){
       const thisWidget = this;
 
       thisWidget.input.addEventListener('change', function(){
-        thisWidget.setValue(thisWidget.input.value);
-        console.log('zmiana');
+        thisWidget.setValue(thisWidget.value);
+      
       });
       thisWidget.linkDecrease.addEventListener('click', function(event){
         event.preventDefault();
-        thisWidget.setValue(thisWidget.input.value -= 1);
+        thisWidget.setValue(thisWidget.value - 1);
         
         
       });
       thisWidget.linkIncrease.addEventListener('click', function(event){
         event.preventDefault();
-        thisWidget.setValue(thisWidget.input.value =Number(thisWidget.input.value) + 1);
-        console.log('zmiana', thisWidget.input.value);
+        console.log('thisWidget.input.value',thisWidget.input.value);
+        thisWidget.setValue(Number(thisWidget.value)  + 1);
+      
       });
     }
     
